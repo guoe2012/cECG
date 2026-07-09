@@ -1,0 +1,12 @@
+../Src/ads1292r_test.c:23:6:ADS1292R_Reset	8	static
+../Src/ads1292r_test.c:33:6:ADS1292R_SendCmd	24	static
+../Src/ads1292r_test.c:44:9:ADS1292R_ReadReg	40	static
+../Src/ads1292r_test.c:72:6:ADS1292R_WriteReg	40	static
+../Src/ads1292r_test.c:98:9:ADS1292R_Test	8	static
+../Src/ads1292r_test.c:109:13:LED_Flash	24	static
+../Src/ads1292r_test.c:122:9:Test_ReadID	16	static
+../Src/ads1292r_test.c:144:9:Test_RegReadWrite	32	static
+../Src/ads1292r_test.c:177:9:Test_DRDY	16	static
+../Src/ads1292r_test.c:220:9:Test_ReadData	32	static
+../Src/ads1292r_test.c:266:9:ADS1292R_RunAllTests	16	static
+../Src/ads1292r_test.c:298:6:ADS1292R_TestMain	16	static

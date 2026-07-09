@@ -1,0 +1,2 @@
+../Src/ads_connect_test.c:23:9:Read_ADS_ID	24	static
+../Src/ads_connect_test.c:36:6:ADS1292R_ConnectTest	16	static,ignoring_inline_asm

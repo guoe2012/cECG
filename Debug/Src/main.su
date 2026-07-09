@@ -1,0 +1,7 @@
+C:/Users/guoe2/Documents/cECG/Drivers/CMSIS/Include/core_cm4.h:1809:22:__NVIC_SetPriority	16	static
+C:/Users/guoe2/Documents/cECG/Drivers/CMSIS/Include/core_cm4.h:2017:26:SysTick_Config	16	static
+../Src/main.c:9:13:My_HAL_Init	8	static,ignoring_inline_asm
+../Src/main.c:16:13:MX_GPIO_Init	40	static
+../Src/main.c:71:13:MX_SPI2_Init	40	static
+../Src/main.c:109:5:main	8	static
+../Src/main.c:120:6:Error_Handler	4	static,ignoring_inline_asm
