@@ -16,6 +16,8 @@
 
 #include "main.h"
 #include "ads1292r_test.h"
+#include "ili9488.h"
+#include <stdio.h>
 
 /**
  * ADS1292R 硬件复位
@@ -27,14 +29,17 @@ void ADS1292R_Reset(void) {
     HAL_Delay(100); // 等待内部振荡器和PLL稳定
 }
 
+/* tSDECODE: 4个CLK周期 @ 2MHz MCO ≈ 2µs, 16MHz主频下32个NOP ≈ 2µs */
+#define ADS_DELAY_2US() do { for (volatile int _i = 0; _i < 32; _i++) __NOP(); } while(0)
+
 /**
  * 发送命令到 ADS1292R
  */
 void ADS1292R_SendCmd(uint8_t cmd) {
     HAL_GPIO_WritePin(ADS_CS_PORT, ADS_CS_PIN, GPIO_PIN_RESET);
-    HAL_Delay(2);
+    ADS_DELAY_2US();
     HAL_SPI_Transmit(&hspi2, &cmd, 1, 100);
-    HAL_Delay(2);
+    ADS_DELAY_2US();
     HAL_GPIO_WritePin(ADS_CS_PORT, ADS_CS_PIN, GPIO_PIN_SET);
 }
 
@@ -46,21 +51,21 @@ uint8_t ADS1292R_ReadReg(uint8_t addr) {
     uint8_t val = 0;
     
     HAL_GPIO_WritePin(ADS_CS_PORT, ADS_CS_PIN, GPIO_PIN_RESET);
-    HAL_Delay(2);
+    ADS_DELAY_2US();
     
     // 发送 Opcode 1 (读命令与寄存器地址)
     cmd = ADS_CMD_RREG | addr;
     HAL_SPI_Transmit(&hspi2, &cmd, 1, 100);
-    HAL_Delay(2); // tSDECODE 延时
+    ADS_DELAY_2US(); // tSDECODE 延时
     
     // 发送 Opcode 2 (读取的寄存器个数 - 1，当前为0)
     cmd = 0x00;
     HAL_SPI_Transmit(&hspi2, &cmd, 1, 100);
-    HAL_Delay(2); // tSDECODE 延时
+    ADS_DELAY_2US(); // tSDECODE 延时
     
     // 接收寄存器数据
     HAL_SPI_Receive(&hspi2, &val, 1, 100);
-    HAL_Delay(1);
+    ADS_DELAY_2US();
     
     HAL_GPIO_WritePin(ADS_CS_PORT, ADS_CS_PIN, GPIO_PIN_SET);
     return val;
@@ -73,21 +78,21 @@ void ADS1292R_WriteReg(uint8_t addr, uint8_t data) {
     uint8_t cmd;
     
     HAL_GPIO_WritePin(ADS_CS_PORT, ADS_CS_PIN, GPIO_PIN_RESET);
-    HAL_Delay(2);
+    ADS_DELAY_2US();
     
     // 发送 Opcode 1 (写命令与寄存器地址)
     cmd = ADS_CMD_WREG | addr;
     HAL_SPI_Transmit(&hspi2, &cmd, 1, 100);
-    HAL_Delay(2); // tSDECODE 延时
+    ADS_DELAY_2US(); // tSDECODE 延时
     
     // 发送 Opcode 2 (写入的寄存器个数 - 1，当前为0)
     cmd = 0x00;
     HAL_SPI_Transmit(&hspi2, &cmd, 1, 100);
-    HAL_Delay(2); // tSDECODE 延时
+    ADS_DELAY_2US(); // tSDECODE 延时
     
     // 发送要写入的数据
     HAL_SPI_Transmit(&hspi2, &data, 1, 100);
-    HAL_Delay(2);
+    ADS_DELAY_2US();
     
     HAL_GPIO_WritePin(ADS_CS_PORT, ADS_CS_PIN, GPIO_PIN_SET);
 }
@@ -103,17 +108,46 @@ uint8_t ADS1292R_Test(void) {
 uint8_t test_step = 0;
 uint8_t test_result = 0xFF; // 0xFF = 正在运行/未开始, 0 = 全部通过, 1-4 = 失败步骤
 
-/**
- * LED闪烁指定次数
- */
-static void LED_Flash(uint8_t count, uint16_t on_ms, uint16_t off_ms) {
-    for (uint8_t i = 0; i < count; i++) {
-        HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET); // LED ON
-        HAL_Delay(on_ms);
-        HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);   // LED OFF
-        HAL_Delay(off_ms);
+/* LCD显示测试结果 */
+static char lcd_buf[64];
+static void LCD_ShowStep(uint8_t step, const char *name, uint8_t pass) {
+    uint16_t y = 10 + step * 30;
+    sprintf(lcd_buf, "Step %d: %s", step, name);
+    LCD_DrawString(10, y, lcd_buf, COLOR_WHITE, COLOR_BLACK, 2);
+    if (pass) {
+        LCD_DrawString(350, y, "PASS", COLOR_GREEN, COLOR_BLACK, 2);
+    } else {
+        LCD_DrawString(350, y, "FAIL", COLOR_RED, COLOR_BLACK, 2);
     }
 }
+
+static void LCD_ShowID(uint8_t id) {
+    sprintf(lcd_buf, "ID=0x%02X", id);
+    LCD_DrawString(250, 10, lcd_buf, COLOR_CYAN, COLOR_BLACK, 2);
+}
+
+static void LCD_ShowRegDump(uint8_t *regs) {
+    uint16_t y = 160;
+    LCD_DrawString(10, y, "--- Register Dump ---", COLOR_YELLOW, COLOR_BLACK, 1);
+    sprintf(lcd_buf, "ID:%02X CFG1:%02X CFG2:%02X", regs[0], regs[1], regs[2]);
+    LCD_DrawString(10, y+15, lcd_buf, COLOR_WHITE, COLOR_BLACK, 1);
+    sprintf(lcd_buf, "CH1:%02X CH2:%02X RLD:%02X", regs[3], regs[4], regs[5]);
+    LCD_DrawString(10, y+30, lcd_buf, COLOR_WHITE, COLOR_BLACK, 1);
+}
+
+static void LCD_ShowFinal(uint8_t result) {
+    LCD_FillRect(0, 270, 480, 50, COLOR_BLACK);
+    if (result == 0) {
+        LCD_DrawString(10, 280, "ALL TESTS PASSED", COLOR_GREEN, COLOR_BLACK, 3);
+    } else {
+        sprintf(lcd_buf, "FAILED at step %d", result);
+        LCD_DrawString(10, 280, lcd_buf, COLOR_RED, COLOR_BLACK, 3);
+    }
+}
+
+/* 存储读回的ID和寄存器供LCD显示 */
+static uint8_t saved_id = 0;
+static uint8_t saved_regs[6] = {0};
 
 /**
  * 测试1：读取ID寄存器
@@ -127,6 +161,18 @@ uint8_t Test_ReadID(void) {
     HAL_Delay(10);
     
     id = ADS1292R_ReadReg(REG_ID);
+    saved_id = id;
+    
+    /* 同时读取所有关键寄存器供后续显示 */
+    saved_regs[0] = id;
+    saved_regs[1] = ADS1292R_ReadReg(REG_CONFIG1);
+    saved_regs[2] = ADS1292R_ReadReg(REG_CONFIG2);
+    saved_regs[3] = ADS1292R_ReadReg(REG_CH1SET);
+    saved_regs[4] = ADS1292R_ReadReg(REG_CH2SET);
+    saved_regs[5] = ADS1292R_ReadReg(REG_RLDSENS);
+    
+    LCD_ShowID(id);
+    LCD_ShowRegDump(saved_regs);
     
     /* ADS1292R: bit[3:0] = 0x03, ADS1292: bit[3:0] = 0x01 */
     if ((id & 0x0F) == 0x03) {
@@ -187,8 +233,9 @@ uint8_t Test_DRDY(void) {
     HAL_Delay(10);
     ADS1292R_WriteReg(REG_CONFIG1, 0x02);  // 500 SPS
     ADS1292R_WriteReg(REG_CONFIG2, 0xA0);  // 内部参考, 测试信号关闭
-    ADS1292R_WriteReg(REG_CH1SET, 0x60);   // 增益6, 正常输入
-    ADS1292R_WriteReg(REG_CH2SET, 0x60);   // 增益6, 正常输入
+    /* 通道对调: CH1=短路(噪声), CH2=正常输入(真实ECG) */
+    ADS1292R_WriteReg(REG_CH1SET, 0x05);   // 增益1, MUX=101(输入短路)
+    ADS1292R_WriteReg(REG_CH2SET, 0x60);   // 增益6, MUX=000(正常电极)
     HAL_Delay(10);
     
     /* START 引脚已接地，改用 SPI 命令启动转换 */
@@ -234,8 +281,9 @@ uint8_t Test_ReadData(void) {
     HAL_Delay(10);
     ADS1292R_WriteReg(REG_CONFIG1, 0x02);  // 500 SPS
     ADS1292R_WriteReg(REG_CONFIG2, 0xA0);  // 内部参考
-    ADS1292R_WriteReg(REG_CH1SET, 0x60);   // 增益6, 正常输入
-    ADS1292R_WriteReg(REG_CH2SET, 0x60);
+    /* 通道对调: CH1=短路(噪声), CH2=正常输入(真实ECG) */
+    ADS1292R_WriteReg(REG_CH1SET, 0x05);   // 增益1, MUX=101(输入短路)
+    ADS1292R_WriteReg(REG_CH2SET, 0x60);   // 增益6, MUX=000(正常电极)
     HAL_Delay(10);
     
     /* START 引脚已接地，用 SPI 命令启动转换 */
@@ -276,27 +324,31 @@ fail:
 uint8_t ADS1292R_RunAllTests(void) {
     uint8_t result;
     
+    LCD_FillScreen(COLOR_BLACK);
+    LCD_DrawString(10, 5, "ADS1292R Hardware Test", COLOR_YELLOW, COLOR_BLACK, 2);
+    
     /* 步骤1：读ID */
     test_step = 1;
     result = Test_ReadID();
+    LCD_ShowStep(1, "Read ID", result != 0);
     if (result == 0) return 1;
-    LED_Flash(1, 50, 50);  // 短闪1次表示步骤1通过
     
     /* 步骤2：寄存器读写 */
     test_step = 2;
     result = Test_RegReadWrite();
+    LCD_ShowStep(2, "Reg R/W", result != 0);
     if (result == 0) return 2;
-    LED_Flash(2, 50, 50);  // 短闪2次表示步骤2通过
     
     /* 步骤3：DRDY信号 */
     test_step = 3;
     result = Test_DRDY();
+    LCD_ShowStep(3, "DRDY Signal", result != 0);
     if (result == 0) return 3;
-    LED_Flash(3, 50, 50);  // 短闪3次表示步骤3通过
     
     /* 步骤4：数据读取 */
     test_step = 4;
     result = Test_ReadData();
+    LCD_ShowStep(4, "Data Read", result != 0);
     if (result == 0) return 4;
     
     return 0;  // 全部通过
@@ -308,23 +360,13 @@ uint8_t ADS1292R_RunAllTests(void) {
 void ADS1292R_TestMain(void) {
     uint8_t fail_step;
     
-    /* 等待1秒让ADS1292R稳定 */
+    LCD_Init();
     HAL_Delay(1000);
     
     /* 运行测试 */
     fail_step = ADS1292R_RunAllTests();
     test_result = fail_step;
     
-    /* 报告结果 */
-    while (1) {
-        if (fail_step == 0) {
-            /* 全部通过：慢闪 */
-            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-            HAL_Delay(500);
-        } else {
-            /* 失败：长闪N次表示失败步骤，然后常亮 */
-            LED_Flash(fail_step, 300, 200);
-            HAL_Delay(1000);
-        }
-    }
+    /* 在LCD底部显示最终结果 */
+    LCD_ShowFinal(fail_step);
 }

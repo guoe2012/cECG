@@ -173,7 +173,7 @@ static void LCD_SPI_Init(void) {
     GPIO_InitStruct.Alternate = GPIO_AF6_SPI3;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-    /* SPI3 配置 - 最稳妥的全双工模式，1MHz */
+    /* SPI3 配置 - 全双工模式，2MHz */
     hspi3.Instance = SPI3;
     hspi3.Init.Mode = SPI_MODE_MASTER;
     hspi3.Init.Direction = SPI_DIRECTION_2LINES;
@@ -181,7 +181,7 @@ static void LCD_SPI_Init(void) {
     hspi3.Init.CLKPolarity = SPI_POLARITY_HIGH;   /* CPOL=1 */
     hspi3.Init.CLKPhase = SPI_PHASE_2EDGE;        /* CPHA=1, SPI Mode 3 */
     hspi3.Init.NSS = SPI_NSS_SOFT;
-    hspi3.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16; /* 修复6: 实际速率取决于系统时钟，预分频/16（如系统时钟16MHz则1MHz） */
+    hspi3.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_8; /* 提速: 预分频/8 → 2MHz */
     hspi3.Init.FirstBit = SPI_FIRSTBIT_MSB;
     hspi3.Init.TIMode = SPI_TIMODE_DISABLE;
     hspi3.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;

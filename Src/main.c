@@ -3,6 +3,9 @@
 #include "ads_connect_test.h"
 #include "ads1292r_test.h"
 #include "ecg_acquisition.h"
+#include "usb_device.h"
+#include "usbd_cdc_if.h"
+#include "dfu_manager.h"
 
 SPI_HandleTypeDef hspi2;
 volatile uint32_t dbg_cfgr = 0;
@@ -115,17 +118,39 @@ static void MX_SPI2_Init(void)
 
 int main(void)
 {
+  /* Check for DFU mode request early before any initialization */
+  DFU_Init();
+  if (DFU_IsRequested())
+  {
+    DFU_ClearRequest();
+    DFU_JumpToBootloader();
+    /* Should never reach here */
+    while(1) {}
+  }
+  
   My_HAL_Init();
   MX_GPIO_Init();
   MX_SPI2_Init();
 
-  /* === 方波测试模式 ===
-   * CONFIG2=0xA3 开启内部方波，CH1/CH2 MUX=101（内部测试信号）
-   * LCD 上应显示 1Hz 方波
-   */
-  ECG_Run();   /* 方波模式入口 */
+  /* LED闪烁确认代码在跑 */
+  for (int i = 0; i < 5; i++) {
+    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+    HAL_Delay(200);
+  }
 
-  /* === 连接测试（注释掉以启用）===
+  MX_USB_Device_Init();
+
+  /* USB测试：启动后发一条消息 */
+  HAL_Delay(2000);
+  CDC_Transmit_FS((uint8_t *)"USB CDC OK!\r\n", 13);
+
+  /* === ECG采集模式(内部方波测试) ===
+   * CONFIG2=0xAC 启用内部测试信号, CH2=65(测试信号)
+   * LCD上应显示1Hz方波
+   */
+  ECG_Run();
+
+  /* === ADS1292R 硬件测试模式（注释掉以启用ECG）===
   ADS1292R_TestMain();
   */
 
@@ -136,4 +161,10 @@ void Error_Handler(void)
 {
   __disable_irq();
   while (1) {}
+}
+
+/* USB低功耗恢复回调需要此函数，当前不使用低功耗 */
+void SystemClock_Config(void)
+{
+  /* 恢复后SysTick已经重新配置，无需额外操作 */
 }

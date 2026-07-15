@@ -22,6 +22,9 @@
 #include "stm32g4xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "usb_device.h"
+#include "usbd_conf.h"
+extern PCD_HandleTypeDef hpcd_USB_FS;
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -199,5 +202,32 @@ void SysTick_Handler(void)
 /******************************************************************************/
 
 /* USER CODE BEGIN 1 */
+/**
+  * @brief This function handles USB low priority interrupt.
+  */
+void USB_LP_IRQHandler(void)
+{
+  /* USER CODE BEGIN USB_LP_IRQn 0 */
+
+  /* USER CODE END USB_LP_IRQn 0 */
+  HAL_PCD_IRQHandler(&hpcd_USB_FS);
+  /* USER CODE BEGIN USB_LP_IRQn 1 */
+
+  /* USER CODE END USB_LP_IRQn 1 */
+}
+
+/**
+  * @brief This function handles USB wake-up interrupt.
+  */
+void USBWakeUp_IRQHandler(void)
+{
+  /* USER CODE BEGIN USBWakeUp_IRQn 0 */
+
+  /* USER CODE END USBWakeUp_IRQn 0 */
+  HAL_PCD_IRQHandler(&hpcd_USB_FS);
+  /* USER CODE BEGIN USBWakeUp_IRQn 1 */
+
+  /* USER CODE END USBWakeUp_IRQn 1 */
+}
 
 /* USER CODE END 1 */
