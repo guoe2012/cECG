@@ -1,3 +1,4 @@
+build_linux/
 __pycache__/
 *.pyc
 scratch/
