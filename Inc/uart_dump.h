@@ -1,16 +1,13 @@
 /**
- * UART 数据导出 — 用于信号质量分析
+ * 数据导出 — 通过 USB CDC 输出 ECG 帧
  */
 #ifndef __UART_DUMP_H
 #define __UART_DUMP_H
 
 #include "main.h"
 
-/* === 开关: 定义此宏启用 UART 数据流输出 === */
-/* 取消注释下面这行来启用:
- *   #define DEBUG_UART_STREAM
- */
-/* #define DEBUG_UART_STREAM */
+/* === 开关: 定义此宏启用数据流输出 === */
+#define DEBUG_UART_STREAM
 
 #ifdef DEBUG_UART_STREAM
 void ECG_UART_Init(void);

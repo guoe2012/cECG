@@ -281,10 +281,10 @@ void ECG_Init(void) {
 #ifdef ECG_USE_TEST_SIGNAL
     /* === 内部测试信号模式 ===
      * CONFIG2=0xA4: INT_TEST=1, 测试信号1Hz方波, 幅度±1mV
-     * CH2SET=0x65:   MUX=101(内部测试信号输入) */
+     * CH2SET=0x05:   MUX=101(内部测试信号输入) */
     ADS_WriteReg(REG_CONFIG2, 0xA4);
     ADS_WriteReg(REG_CH1SET, 0x05);   /* 增益6, MUX=101(输入短路) */
-    ADS_WriteReg(REG_CH2SET, 0x65);   /* 增益6, MUX=101(测试信号) */
+    ADS_WriteReg(REG_CH2SET, 0x05);   /* 增益6, MUX=101(测试信号) */
     ADS_WriteReg(REG_RLDSENS, 0x00);  /* 测试模式不需要RLD */
 #else
     /* === 正常ECG模式 === */
@@ -293,7 +293,7 @@ void ECG_Init(void) {
      *   PDB_LOFF_COMP=1, PDB_REFBUF=0(内部参考缓冲关, AVDD供电即可), VREF_4V=1 */
     ADS_WriteReg(REG_CONFIG2, 0xA0);  /* 内部参考, 测试信号OFF */
     ADS_WriteReg(REG_CH1SET, 0x01);   /* 增益6(默认), MUX=001(输入短路=噪声基线) */
-    ADS_WriteReg(REG_CH2SET, 0x60);   /* 增益6, MUX=000(正常电极输入=真实ECG) */
+    ADS_WriteReg(REG_CH2SET, 0x00);   /* 增益6, MUX=000(正常电极输入=真实ECG) */
     ADS_WriteReg(REG_RLDSENS, 0x58);  /* PDB_RLD=1(开启RLD), RLD2N=1, RLD2P=1 (CH2P+CH2N接入RLD) */
 #endif
 
@@ -304,7 +304,7 @@ void ECG_Init(void) {
     dbg_regs[1] = ADS_ReadReg(REG_CONFIG1);
     dbg_regs[2] = ADS_ReadReg(REG_CONFIG2); /* 期望 0xA0 */
     dbg_regs[3] = ADS_ReadReg(REG_CH1SET);  /* 期望 0x01 (短路噪声基线) */
-    dbg_regs[4] = ADS_ReadReg(REG_CH2SET);  /* 期望 0x60 (真实电极) */
+    dbg_regs[4] = ADS_ReadReg(REG_CH2SET);  /* 期望 0x00 (真实电极, 增益6) */
     dbg_regs[5] = ADS_ReadReg(REG_RLDSENS); /* 期望 0x58 (RLD开启,CH2P+CH2N) */
 }
 
@@ -358,6 +358,7 @@ uint8_t ECG_ReadData(int32_t *ch1, int32_t *ch2) {
 
 /* ECG 信号缩放
  * ADS1292R: VREF=2.4V, 增益=6, 满量程=±0.4V = ±8388607 LSB
+ *   CHxSET[6:4] 增益编码: 000=6, 001=1, 010=2, 011=3, 100=4, 101=8, 110=12
  * 真实肢体导联心电: 峰值约 1~2mV @ 电极
  *   → 经增益6 → 6~12mV → ADC值约 ±209715 LSB (1mV)
  * 缩放: 1mV 对应 ~30像素 → 除以 6990

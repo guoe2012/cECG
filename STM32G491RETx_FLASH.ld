@@ -117,6 +117,15 @@ SECTIONS
     __bss_end__ = _ebss;
   } >RAM
 
+  /* Noinit section - NOT cleared by startup code, survives soft reset */
+  .noinit (NOLOAD) :
+  {
+    . = ALIGN(4);
+    *(.noinit)
+    *(.noinit*)
+    . = ALIGN(4);
+  } >RAM
+
   /* User_heap_stack section */
   ._user_heap_stack :
   {

@@ -193,7 +193,7 @@ uint8_t Test_RegReadWrite(void) {
      * 只对 CH1SET / CH2SET 做读写验证，这两个寄存器全部可写。
      * CONFIG1 / CONFIG2 有保留位，写入 0xFF 会导致回读不一致。
      */
-    uint8_t test_vals[] = {0x00, 0x20, 0x40, 0x60}; /* MUX秘地/山 × 增益1/2/3/6 */
+    uint8_t test_vals[] = {0x00, 0x20, 0x40, 0x60}; /* MUX=000 × 增益6/1/2/3 (CHxSET[6:4]=000/001/010/011) */
     uint8_t test_regs[] = {REG_CH1SET, REG_CH2SET};
 
     for (int i = 0; i < 2; i++) {
@@ -234,8 +234,8 @@ uint8_t Test_DRDY(void) {
     ADS1292R_WriteReg(REG_CONFIG1, 0x02);  // 500 SPS
     ADS1292R_WriteReg(REG_CONFIG2, 0xA0);  // 内部参考, 测试信号关闭
     /* 通道对调: CH1=短路(噪声), CH2=正常输入(真实ECG) */
-    ADS1292R_WriteReg(REG_CH1SET, 0x05);   // 增益1, MUX=101(输入短路)
-    ADS1292R_WriteReg(REG_CH2SET, 0x60);   // 增益6, MUX=000(正常电极)
+    ADS1292R_WriteReg(REG_CH1SET, 0x05);   // 增益6, MUX=101(输入短路)
+    ADS1292R_WriteReg(REG_CH2SET, 0x00);   // 增益6, MUX=000(正常电极)
     HAL_Delay(10);
     
     /* START 引脚已接地，改用 SPI 命令启动转换 */
@@ -282,8 +282,8 @@ uint8_t Test_ReadData(void) {
     ADS1292R_WriteReg(REG_CONFIG1, 0x02);  // 500 SPS
     ADS1292R_WriteReg(REG_CONFIG2, 0xA0);  // 内部参考
     /* 通道对调: CH1=短路(噪声), CH2=正常输入(真实ECG) */
-    ADS1292R_WriteReg(REG_CH1SET, 0x05);   // 增益1, MUX=101(输入短路)
-    ADS1292R_WriteReg(REG_CH2SET, 0x60);   // 增益6, MUX=000(正常电极)
+    ADS1292R_WriteReg(REG_CH1SET, 0x05);   // 增益6, MUX=101(输入短路)
+    ADS1292R_WriteReg(REG_CH2SET, 0x00);   // 增益6, MUX=000(正常电极)
     HAL_Delay(10);
     
     /* START 引脚已接地，用 SPI 命令启动转换 */
