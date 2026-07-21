@@ -1,7 +1,9 @@
 build_linux/
+Debug/
 __pycache__/
 *.pyc
 scratch/
 ecg_dump_ch1.csv
 ecg_dump_ch2.csv
 swappy-*.png
+.~lock.*#

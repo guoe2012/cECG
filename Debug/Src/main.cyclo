@@ -1,7 +1,0 @@
-C:/Users/guoe2/Documents/cECG/Drivers/CMSIS/Include/core_cm4.h:1809:22:__NVIC_SetPriority	2
-C:/Users/guoe2/Documents/cECG/Drivers/CMSIS/Include/core_cm4.h:2017:26:SysTick_Config	2
-../Src/main.c:9:13:My_HAL_Init	1
-../Src/main.c:16:13:MX_GPIO_Init	1
-../Src/main.c:71:13:MX_SPI2_Init	2
-../Src/main.c:109:5:main	1
-../Src/main.c:120:6:Error_Handler	1
